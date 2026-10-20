@@ -1,0 +1,23 @@
+{
+  "name": "expiryguard-recipe-proxy",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": true,
+  "vars": {
+    "ALLOWED_ORIGINS": "https://saniamusliar.github.io",
+    "APP_URL": "https://saniamusliar.github.io/expiry-guard/"
+  },
+  "secrets": {
+    "required": ["OPENROUTER_API_KEY"]
+  },
+  "ratelimits": [
+    {
+      "name": "RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    }
+  ]
+}
