@@ -1,7 +1,11 @@
 import type { FoodItem } from '../types'
 import type { RecipeFilters } from './recipes'
 
-const ENDPOINT = (import.meta.env.VITE_RECIPE_PROXY_URL?.trim() || '/api/ask-recipe')
+const PROXY_URL = import.meta.env.VITE_RECIPE_PROXY_URL?.trim()
+
+const ENDPOINT = PROXY_URL
+  ? `${PROXY_URL.replace(/\/+$/, '').replace(/\/api\/ask-recipe$/, '')}/api/ask-recipe`
+  : '/api/ask-recipe'
 
 type AskArgs = {
   question: string
