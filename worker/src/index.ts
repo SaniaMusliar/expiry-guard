@@ -99,7 +99,19 @@ async function handleRecipeRequest(request: Request, env: Env, origin: string | 
   const offset = Math.max(-3650, Math.min(3650, validNumber(body.offset, 0)))
   const titles = Array.isArray(body.localRecipeTitles) ? body.localRecipeTitles.filter((title): title is string => typeof title === 'string').map((title) => title.trim().slice(0, 100)).filter(Boolean).slice(0, MAX_TITLES) : []
   const inventory = items.map((item) => ({ ...item, daysUntilExpiry: item.daysUntilExpiry + offset }))
-  const prompt = [`User question: ${question}`, `Preferences: ${preferenceText(filters)}`, 'Pantry inventory. Items with daysUntilExpiry below 0 are expired and must not be recommended:', JSON.stringify(inventory), `Built-in recipe titles for grounded options: ${titles.join(', ')}`].join('\n')
+  const prompt = [
+  `User question: ${question}`,
+  `Preferences: ${preferenceText(filters)}`,
+  'Inventory context. Use this inventory to identify ingredients the user already has.',
+  'You may answer the user even when requested ingredients are missing from the inventory.',
+  'Clearly separate ingredients into available, missing, and expired.',
+  'Never recommend using an expired item. Mark expired items as unsafe to use and advise discarding them according to normal food-safety guidance.',
+  'Do not claim that an ingredient is available unless it appears in the inventory.',
+  'If the user asks for a recipe using ingredients that are not in the inventory, still provide the recipe and list those ingredients under "Missing ingredients".',
+  'Prefer available ingredients when practical, but do not restrict the answer to available ingredients unless the user explicitly asks for pantry-only recipes.',
+  JSON.stringify(inventory),
+  `Built-in recipe titles for grounded options: ${titles.join(', ')}`,
+].join('\n')
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 15_000)
@@ -114,7 +126,7 @@ async function handleRecipeRequest(request: Request, env: Env, origin: string | 
         temperature: 0.35,
         max_tokens: MAX_RESPONSE_TOKENS,
         messages: [
-          { role: 'system', content: 'You are ExpiryGuard Smart Recipe Search. Give practical, concise recipe guidance grounded in the supplied pantry. Never recommend or imply that expired food is safe; tell the user to discard or inspect expired items instead. Do not claim an ingredient is available unless it appears in the pantry. Respect cuisine, diet, and time preferences. Mention missing ingredients when useful. The answer is advice, not a food-safety certification.' },
+          {   role: 'system',   content: [     'You are ExpiryGuard Smart Recipe Search.',     'Answer the user’s actual cooking question, even when some requested ingredients are missing from inventory.',     'Use inventory items as context, not as a strict limitation.',     'For every recommendation, distinguish between available ingredients, missing ingredients, and expired ingredients.',     'Never recommend, imply, or provide instructions to use expired food.',     'Explicitly tell the user to avoid expired ingredients.',     'Do not claim an ingredient is available unless it appears in the supplied inventory.',     'If an ingredient is missing, include it in a short "Missing ingredients" list.',     'Prioritize ingredients already available and ingredients expiring soon when relevant.',     'Respect cuisine, dietary, and cooking-time preferences.',     'Only restrict recipes to inventory ingredients when the user explicitly asks for a pantry-only recipe.',     'Keep the response practical and concise.',     'The response is cooking guidance, not a food-safety certification.',   ].join(' '), },
           { role: 'user', content: prompt },
         ],
       }),
